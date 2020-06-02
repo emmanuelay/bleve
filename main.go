@@ -65,26 +65,27 @@ func seedIndex(index bleve.Index) {
 	batchSize := 10
 	batchCount := 0
 
-	fmt.Println("- Seeding index")
+	// Create batch
 	batch := index.NewBatch()
 
 	for _, user := range users {
 		batch.Index(string(user.ID), user)
 		batchCount = (batchCount + 1) % (batchSize + 1)
 
+		// Batch limit
 		if batchCount == batchSize {
-			fmt.Println("- Seeding batch")
 			err := index.Batch(batch)
 			if err != nil {
 				panic(err)
 			}
 
+			// New batch
 			batch = index.NewBatch()
 		}
 	}
 
+	// Seed last batch...
 	if batchCount > 0 {
-		fmt.Println("- Seeding last batch")
 		err := index.Batch(batch)
 		if err != nil {
 			panic(err)
@@ -142,6 +143,7 @@ func search(searchString string, index bleve.Index) error {
 		return err
 	}
 
+	// Render search hits
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"#", "First Name", "Last Name", "Age"})
@@ -158,10 +160,27 @@ func search(searchString string, index bleve.Index) error {
 		)
 	}
 	t.Render()
+
+	// Render facets
+	t = table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"#", "Field", "Total", "Missing", "Other"})
+
+	for key, item := range searchResult.Facets {
+
+		t.AppendRows([]table.Row{
+			{0, key, item.Total, item.Missing, item.Other},
+		})
+	}
+
+	t.Render()
+
 	return nil
 }
 
 func main() {
+
+	fmt.Println("Simple Bleve test")
 
 	// Create new Index mapping
 	mapping := bleve.NewIndexMapping()
@@ -179,10 +198,10 @@ func main() {
 	// Create a STDIN reader
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println("Type searchstring and press ENTER (ex: '+ gender:female + age:>=45')")
+	fmt.Println("Type searchstring and press ENTER (ex: '+ gender:female + age:>=45') or type 'exit' to quit")
 
 	for {
-		fmt.Print("-> ")
+		fmt.Print(" > ")
 
 		text, _ := reader.ReadString('\n')
 		// convert CRLF to LF
